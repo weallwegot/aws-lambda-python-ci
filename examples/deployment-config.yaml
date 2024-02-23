@@ -1,0 +1,14 @@
+[configuration]
+function-name=lambda-function-name
+description=A description of the lambda being deployed
+runtime=python3.9
+handler=app.handler
+region=TAKEN-FROM-DEFAULT-PROFILE
+timeout=240
+memory-size=256
+role=arn:aws:iam::0123456789:role/lambda-role-created
+
+[environment]
+env1=val1
+env2=val2
+env3=val3

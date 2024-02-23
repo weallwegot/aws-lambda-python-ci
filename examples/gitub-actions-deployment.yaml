@@ -1,0 +1,46 @@
+name: Example Deployment Process
+on:
+  push:
+    branches:
+      - main
+      - develop
+permissions:
+  id-token: write   # This is required for requesting the JWT
+  contents: read    # This is required for actions/checkout
+# on: [push]
+jobs:
+  Deploy-Lambda-Functions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Configure AWS Credentials
+        # https://github.com/aws-actions/configure-aws-credentials/issues/489
+        # https://www.cloudquery.io/blog/keyless-access-to-aws-in-github-actions-with-oidc
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          role-to-assume: ${{ vars.AWS_GITHUB_ACTION_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9' # explicitly match runtime of lambda so pip installs include right version i.e. for numpy c extensions
+      - name: Deploy into Production
+        if: ${{ github.ref_name == 'main' }}
+        run: |
+          echo "deploying into production"
+          cd lambda
+          git clone "https://github.com/weallwegot/aws-lambda-python-ci.git" CI/
+          python CI/deploy_orchestration.py production arn:fake-role-to-overwrite-from-deployment-config ${{ vars.S3_BUCKET_NAME_PRODUCTION }} ${{ vars.APP_ENVIRONMENT }}
+          cd ..
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9' # explicitly match runtime of lambda so pip installs include right version i.e. for numpy c extensions
+      - name: Deploy into Development
+        if: ${{ github.ref_name == 'develop' }}
+        run: |
+          echo "deploying into development"
+          cd lambda
+          git clone "https://github.com/weallwegot/aws-lambda-python-ci.git" CI/
+          python CI/deploy_orchestration.py development arn:fake-role-to-overwrite-from-deployment-config ${{ vars.S3_BUCKET_NAME_DEVELOPMENT }} ${{ vars.APP_ENVIRONMENT }}
+          cd ..
